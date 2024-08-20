@@ -116,7 +116,7 @@ class VelodyneCalibration:
                 'parse_row_len': 300,
                 }
 
-        elif lidar_type in [32, 'HDL-32E']:
+        elif lidar_type in [33, 'HDL-32E']:
             #Calibration for Velodyne-32e lidar may be invalid (need to validate rotCorrection).
             #Check to make sure results make sense!
 
@@ -139,9 +139,13 @@ class VelodyneCalibration:
                 'parse_row_len': 300,
                 'default_frames_per_rotation': 150,
             }
+        elif lidar_type == 36:
+            raise ValueError(f'Lidar type (product ID) {lidar_type} (Puck Hi-Res) is not currently supported!')
+        elif lidar_type == 49:
+            raise ValueError(f'Lidar type (product ID) {lidar_type} (Velarray) is not currently supported!')
         
         else:
-            raise ValueError(f'Lidar type {lidar_type} does not have calibration info to load!')
+            raise ValueError(f'Lidar type (product ID) {lidar_type} does not have calibration info to load!')
 
     def precompute_lidar_params(self, lidar_type):
         ret = self.get_raw_calibration(lidar_type)

@@ -25,11 +25,11 @@ class VelodyneCalibration:
                 'vertAngle': [-15, 1, -13, 3, -11, 5, -9, 7, -7, 9, 
                     -5, 11, -3, 13, -1, 15] * 2,
                 'distScalar': 1/500,
-                'header_len': 42,
                 'parse_row_len': 300,
             }
 
         elif lidar_type in [40, 'VLP-32c']:
+            #manual: https://icave2.cse.buffalo.edu/resources/sensor-modeling/VLP32CManual.pdf
             return {
                 'lidar_name': 'VLP-32c',
                 'distCorrection': [0] * 32,
@@ -44,11 +44,11 @@ class VelodyneCalibration:
                     -4.667, 1.667, 1.0, -3.667, -3.333, 3.333, 2.333, -2.667, 
                     -3.0, 7.0, 4.667, -2.333, -2.0, 15.0, 10.333, -1.333],
                 'distScalar': 1/250,
-                'header_len': 44,
                 'parse_row_len': 300,
             }
 
         elif lidar_type in [161, 128, 'VLS-128']:
+            #manual: https://www.manualslib.com/manual/2351432/Velodyne-Vls-128.html?
             return {
                 'lidar_name': 'VLS-128',
                 'distCorrection': [0] * 128,
@@ -69,11 +69,11 @@ class VelodyneCalibration:
                     6.98, -3.09, 4.98, -3.75, 1.64, -8.352, -2.54, 2.85, -5.84, 
                     -0.45,8.43, -2.87, 2.52, -6.17, -1.66, 3.73, -4.96, 0.43],
                 'distScalar': 1/250,
-                'header_len': 44,
                 'parse_row_len': 100,
             }
         
         elif lidar_type in [64, 'HDL-64']:
+            #manual: https://www.termocam.it/pdf/manuale-HDL-64E.pdf
             return {
                 'lidar_name': 'HDL-64',
                 'distCorrection': [
@@ -113,16 +113,15 @@ class VelodyneCalibration:
                     -16.83769, -10.057948, -9.6941872, -13.149875, -12.762784, -9.2201195, 
                     -8.808835, -12.260476, -11.769718],
                 'distScalar': 1/250,
-                'header_len': 44,
                 'parse_row_len': 300,
                 }
 
-        elif lidarType in [32, 'Velodyne-32e']:
+        elif lidar_type in [32, 'HDL-32E']:
             #Calibration for Velodyne-32e lidar may be invalid (need to validate rotCorrection).
             #Check to make sure results make sense!
 
             return {
-                'lidar_name': 'Velodyne-32e',
+                'lidar_name': 'HDL-32E',
                 'distCorrection': [0] * 32,
                 'rotCorrection': [
                     -1.4, 4.2, -1.4, 1.4, -1.4, 1.4, -4.2, 1.4, -1.4, 4.2, 
@@ -137,7 +136,6 @@ class VelodyneCalibration:
                             -16.00, 5.33, -14.67, 6.67, -13.33, 8.00, -12.00, 9.33,
                             -10.67, 10.67],
                 'distScalar': 1/500,
-                'header_len': 44,
                 'parse_row_len': 300,
                 'default_frames_per_rotation': 150,
             }
@@ -192,9 +190,8 @@ class VelodynePacketParser:
         #productID - See table on page 57: https://velodynelidar.com/wp-content/uploads/2019/12/63-9243-Rev-E-VLP-16-User-Manual.pdf 
         self.productID = int.from_bytes(framedata[-1:], endian, signed = False)
         self.cal = cal.get_calibration(self.productID)
-        headerSize = self.cal['header_len']
-
-        self.lidarAngle = 0
+        headerSize = 42 #header size is 42 for all the supported velodyne models
+        
         self.lidardata = framedata[headerSize: 1206 + headerSize]
         self.lidarTimestamp = int.from_bytes(self.lidardata[1200:1204], endian, signed = False)
     
@@ -211,7 +208,7 @@ class VelodynePacketParser:
         bytes 6 + 3N            ---> intensity           (arr[:,6:data_len:3]) '''
         
         arr = np.frombuffer(self.lidardata, dtype = np.uint8)[:1200].astype(np.int32).reshape(-1,row_len)
-        rotationAzimuth = ((arr[:,2] + arr[:,3].astype(np.float32) * 256) / 100 - self.lidarAngle).reshape(-1).repeat(32)
+        rotationAzimuth = ((arr[:,2] + arr[:,3].astype(np.float32) * 256) / 100).reshape(-1).repeat(32)
         distanceInMeters = (arr[:,4:data_len:3] + (arr[:,5:data_len:3] * 256)).reshape(-1) * self.cal['distScalar']
         intensity = arr[:,6:data_len:3].reshape(-1)
 
